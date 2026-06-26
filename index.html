@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NovaPlex</title>
+
+<style>
+body{
+  margin:0;
+  background:#0b0b10;
+  color:white;
+  font-family:Arial;
+}
+
+/* HERO (Crunchyroll style upgrade) */
+.hero{
+  height:420px;
+  padding:60px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  background:#111;
+  background-size:cover !important;
+  background-position:center !important;
+  position:relative;
+}
+
+.hero::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+}
+
+.hero h1, .hero p{
+  position:relative;
+  z-index:2;
+}
+
+.hero h1{
+  font-size:48px;
+  margin:0;
+}
+
+.hero p{
+  color:#aaa;
+}
+
+/* SEARCH */
+.search-box{
+  padding:20px;
+  display:flex;
+  gap:10px;
+}
+
+input{
+  padding:10px;
+  width:250px;
+  border:none;
+  border-radius:6px;
+}
+
+button{
+  padding:10px 15px;
+  background:#ff4d6d;
+  border:none;
+  color:white;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+/* ROW (Netflix/Crunchyroll scroll) */
+.row{
+  display:flex;
+  overflow-x:auto;
+  gap:16px;
+  padding:20px;
+  scroll-snap-type:x mandatory;
+}
+
+/* CARD */
+.card{
+  min-width:170px;
+  border-radius:12px;
+  overflow:hidden;
+  background:#141420;
+  cursor:pointer;
+  transition:0.25s;
+  scroll-snap-align:start;
+}
+
+.card:hover{
+  transform:scale(1.08);
+  box-shadow:0 10px 25px rgba(0,0,0,0.5);
+}
+
+.card img{
+  width:100%;
+  height:240px;
+  object-fit:cover;
+}
+
+.title{
+  padding:10px;
+  font-size:13px;
+  font-weight:600;
+}
+
+/* PAGE SYSTEM */
+.page{display:none;}
+.page.active{display:block;}
+</style>
+</head>
+
+<body>
+
+<!-- HOME -->
+<div id="home" class="page active">
+
+  <div class="hero">
+    <h1>NovaPlex</h1>
+    <p>Netflix × Crunchyroll Hybrid</p>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-box">
+    <input id="search" placeholder="Search anime..." />
+    <button onclick="searchAnime()">Search</button>
+  </div>
+
+  <!-- SEARCH RESULTS -->
+  <div class="row" id="search-results"></div>
+
+  <!-- TRENDING -->
+  <div class="row" id="trending"></div>
+
+</div>
+
+<!-- DETAIL -->
+<div id="detail" class="page">
+  <button onclick="goHome()">← Back</button>
+
+  <h1 id="title"></h1>
+  <img id="img" width="220">
+  <p id="desc"></p>
+  <p id="info"></p>
+
+  <h3>Episodes</h3>
+  <div id="episodes"></div>
+</div>
+
+<script>
+
+const API = "http://localhost:3000/anime/search/";
+const DETAIL = "http://localhost:3000/anime/";
+
+// ---------------- LOAD TRENDING ----------------
+async function load(){
+  try {
+    const res = await fetch("http://localhost:3000/anime/trending");
+    const data = await res.json();
+
+    const el = document.getElementById("trending");
+    el.innerHTML = data.map(card).join("");
+
+  } catch (err) {
+    console.log("LOAD ERROR:", err);
+  }
+}
+
+// ---------------- CARD ----------------
+function card(item){
+  return `
+    <div class="card" onclick="openAnime(${item.id})">
+      <img src="${item.image}">
+      <div class="title">${item.title}</div>
+    </div>
+  `;
+}
+
+// ---------------- SEARCH ----------------
+async function searchAnime(){
+  const q = document.getElementById("search").value.trim();
+  if(!q) return;
+
+  try {
+    const res = await fetch(API + q);
+    const data = await res.json();
+
+    document.getElementById("search-results").innerHTML =
+      data.map(card).join("");
+
+  } catch (err) {
+    console.log("SEARCH ERROR:", err);
+  }
+}
+
+// ---------------- OPEN DETAIL ----------------
+async function openAnime(id){
+  try {
+    const res = await fetch(DETAIL + id);
+    const data = await res.json();
+
+    document.getElementById("home").classList.remove("active");
+    document.getElementById("detail").classList.add("active");
+
+    document.getElementById("title").innerText =
+      data.title?.english || data.title?.romaji;
+
+    document.getElementById("img").src =
+      data.coverImage?.large;
+
+    document.getElementById("desc").innerText =
+      data.description || "No description";
+
+    document.getElementById("info").innerText =
+      `⭐ Score: ${data.averageScore || "N/A"} | Episodes: ${data.episodes || "N/A"} | Status: ${data.status}`;
+
+    let eps = "";
+    const count = data.episodes || 12;
+
+    for(let i=1;i<=count;i++){
+      eps += `<div>Episode ${i}</div>`;
+    }
+
+    document.getElementById("episodes").innerHTML = eps;
+
+  } catch (err) {
+    console.log("DETAIL ERROR:", err);
+  }
+}
+
+// ---------------- BACK ----------------
+function goHome(){
+  document.getElementById("detail").classList.remove("active");
+  document.getElementById("home").classList.add("active");
+}
+
+// ---------------- START ----------------
+load();
+
+</script>
+
+</body>
+</html>
